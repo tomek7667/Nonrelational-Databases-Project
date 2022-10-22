@@ -1,0 +1,14 @@
+{
+  "name": "nrdb",
+  "version": "1.0.0",
+  "main": "app.js",
+  "author": "Tomasz Dąbrowski",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "4.1.0",
+    "neo4j-driver": "^5.1.0"
+  }
+}
