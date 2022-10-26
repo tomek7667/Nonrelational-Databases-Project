@@ -1,0 +1,13 @@
+Competency questions:
+
+1. Teams and their members
+2. Teams that solved at least 6 tasks
+3. Teams that managed to solve at least one task in each category
+4. Categories and their challenges
+5. 3 teams and their members with the highest scores
+6. Member/s who solved the highest number of challenges
+7. The person/s who joined a team the longest time ago
+8. The flag/s of a challenge/s that was solved by the biggest number of members
+9. The challenges that were solved by the biggest number of teams and their flags
+10. Category that has the biggest sum of possible points from challenges
+

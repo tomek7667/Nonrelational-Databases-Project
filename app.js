@@ -133,12 +133,12 @@ const addCtf = async (ctf) => {
 
 const init = async () => {
 	return new Promise(async (resolve) => {
-		console.log(chalk.green("Clearing the database..."));
+		console.log(chalk.red("Clearing the database..."));
 		await clearCategories();
 		await clearChallenges();
 		await clearTeams();
 		await clearMembers();
-		console.log(chalk.green("Database cleared!"));
+		console.log(chalk.red("Database cleared!"));
 		console.log(chalk.green("Adding categories..."));
 		for (const category of categories) {
 			await addCategory(category);
@@ -156,12 +156,70 @@ const init = async () => {
 	});
 };
 
+const createProjections = async () => {
+	return new Promise(async (resolve) => {
+		console.log(chalk.green("Creating projections..."));
+		await session.run(`
+		CALL gds.graph.project.cypher(
+			'proj1',
+			'MATCH (t:Team) RETURN id(t) AS id, labels(t) AS labels',
+			'MATCH
+			(t1:Team)<--(:Member)-[:SOLVED]->(r:Challenge)<-[:SOLVED]-(:Member)-->(t2:Team)
+			 WHERE ID(t1) < ID(t2)
+			 RETURN DISTINCT id(t1) AS source, id(t2) AS target, count(r)
+			 AS weight'
+			)`);
+		await session.run(`
+		CALL gds.graph.project.cypher(
+			'proj2',
+			'MATCH (c:Category)<--(:Challenge)<-[r:SOLVED]-(:Member)-->(t:Team) RETURN
+			 DISTINCT id(c) AS id, count(r) AS numberOfSolved,
+			 labels(c) AS labels',
+			'MATCH
+			(c1:Category)<--(ch1:Challenge)<-[r1:SOLVED]-(:Member)-->(t:Team)<--(:Member)-[r2:SOLVED]->(ch2:Challenge)-->(c2:Category)
+			 WHERE ID(c1) < ID(c2)
+			 RETURN DISTINCT id(c1) AS source, id(c2) AS target,
+			 sum(ch1.points + ch2.points)
+			 AS weight')`);
+		await session.run(`
+		CALL gds.graph.project.cypher(
+			'proj3',
+			'MATCH (:Challenge)<-[r:SOLVED]-(m:Member)-->(t:Team) RETURN
+			 DISTINCT id(m) AS id, count(r) AS numberOfSolved,
+			 labels(m) AS labels',
+			'MATCH
+			(m1:Member)-[:SOLVED]->(:Challenge)-->(c:Category)<--(:Challenge)<-[:SOLVED]-(m2:Member)
+			 WHERE ID(m1) < ID(m2)
+			 RETURN DISTINCT id(m1) AS source, id(m2) AS target,
+			 count(c) AS weight')`);
+		console.log(chalk.green("Projections created!"));
+		return resolve();
+	});
+};
+
+const clearOldProjections = async () => {
+	return new Promise(async (resolve) => {
+		console.log(chalk.red("Clearing old projections..."));
+		try {
+			await session.run("CALL gds.graph.drop('proj1')");
+			await session.run("CALL gds.graph.drop('proj2')");
+			await session.run("CALL gds.graph.drop('proj3')");
+		} catch {}
+		console.log(chalk.red("Old projections cleared!"));
+		return resolve();
+	});
+};
+
 const main = async () => {
 	console.log(chalk.green("Creating the database..."));
 	await init();
 	console.log(chalk.green("Main init is done!"));
+	console.log(chalk.magenta("Main body starts"));
+	await clearOldProjections();
+	await createProjections();
 	await session.close();
 	await driver.close();
+	return 0;
 };
 
 main();

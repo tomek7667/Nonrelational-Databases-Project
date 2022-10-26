@@ -1,0 +1,53 @@
+1. Weights between teams that shows how many same tasks teams solved
+
+CALL gds.graph.project.cypher(
+'proj1',
+'MATCH (t:Team) RETURN id(t) AS id, labels(t) AS labels',
+'MATCH
+(t1:Team)<--(:Member)-[:SOLVED]->(r:Challenge)<-[:SOLVED]-(:Member)-->(t2:Team)
+ WHERE ID(t1) < ID(t2)
+ RETURN DISTINCT id(t1) AS source, id(t2) AS target, count(r)
+ AS weight'
+)
+
+a. Similarity between the teams:
+
+CALL gds.nodeSimilarity.stream('proj1', {relationShipWeightProperty:"weight"})
+YIELD node1, node2, similarity
+return gds.util.asNode(node1).name AS M1, gds.util.asNode(node2).name AS M2, similarity
+ORDER BY similarity DESC
+
+2. Categories in properties have number of solved tasks in each category by teams.
+Weights represents the sum of points of challenges of two connected categories.
+
+CALL gds.graph.project.cypher(
+'proj2',
+'MATCH (c:Category)<--(:Challenge)<-[r:SOLVED]-(:Member)-->(t:Team) RETURN
+ DISTINCT id(c) AS id, count(r) AS numberOfSolved,
+ labels(c) AS labels',
+'MATCH
+(c1:Category)<--(ch1:Challenge)<-[r1:SOLVED]-(:Member)-->(t:Team)<--(:Member)-[r2:SOLVED]->(ch2:Challenge)-->(c2:Category)
+ WHERE ID(c1) < ID(c2)
+ RETURN DISTINCT id(c1) AS source, id(c2) AS target,
+ sum(ch1.points + ch2.points)
+ AS weight')
+ 
+3. Weights - in how many different categories two members have managed to solve at least one challenge.
+In members properties - how many challenges each managed to solve.
+
+CALL gds.graph.project.cypher(
+'proj3',
+'MATCH (:Challenge)<-[r:SOLVED]-(m:Member)-->(t:Team) RETURN
+ DISTINCT id(m) AS id, count(r) AS numberOfSolved,
+ labels(m) AS labels',
+'MATCH
+(m1:Member)-[:SOLVED]->(:Challenge)-->(c:Category)<--(:Challenge)<-[:SOLVED]-(m2:Member)
+ WHERE ID(m1) < ID(m2)
+ RETURN DISTINCT id(m1) AS source, id(m2) AS target,
+ count(c) AS weight')
+
+b. what is the degree of centrality of players across categories and challenges
+
+CALL gds.degree.stream('proj3', { orientation: 'UNDIRECTED', relationshipWeightProperty: "weight"})
+YIELD nodeId, score
+RETURN gds.util.asNode(nodeId).name AS name, score ORDER BY score DESC

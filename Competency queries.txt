@@ -1,0 +1,39 @@
+1.
+
+match (m:Member) - [:IS_MEMBER_OF] -> (t:Team) return t.name, m.name
+
+2.
+
+match (:Challenge) <- [r:SOLVED] - (:Member) - [:IS_MEMBER_OF] -> (t:Team) with count(r) as cr, t where cr >= 6 return t.name
+
+3.
+
+match (t:Team) <-- (:Member) --> (:Challenge) --> (c:Category) call {match (c:Category) return count(c) as count_cat} with count(distinct c) as cc, t, count_cat where cc = count_cat return t, cc
+
+4.
+
+match (c:Category) <- [:IS_IN_CATEGORY] - (ch:Challenge) return c.name, ch.name, ch.points
+
+5.
+
+match (t:Team) <- [:IS_MEMBER_OF] - (:Member) - [:SOLVED] -> (c:Challenge) with sum(c.points) as sp, t return t.name, sp order by sp desc limit 3
+
+6.
+
+match (m:Member) - [r:SOLVED] -> (:Challenge) call {match (m:Member) - [r:SOLVED] -> (:Challenge) with count(r) as cr, m with max(cr) as mr return mr} with count(r) as cr, m, mr where cr = mr return m.name, cr
+
+7.
+
+match (m:Member) - [r:IS_MEMBER_OF] -> () call {match (m:Member) - [r:IS_MEMBER_OF] -> () with min(r.since) as ms return ms} with ms, r, m where ms = r.since return m.name, r.since
+
+8.
+
+match (:Member) - [r:SOLVED] -> (c:Challenge) call {match (:Member) - [r:SOLVED] -> (c:Challenge) with count(r) as cr, c with max(cr) as mr return mr} with count(r) as cr, c, mr where cr = mr return c.flag, cr
+
+9.
+
+match (t:Team) <- [:IS_MEMBER_OF] - (:Member) - [r:SOLVED] -> (c:Challenge) call {match (t:Team) <- [:IS_MEMBER_OF] - (:Member) - [r:SOLVED] -> (c:Challenge) with count(r) as cr, c with max(cr) as mc return mc} with count(r) as cr, c, mc where cr = mc return c.flag, cr
+
+10.
+
+match (c:Category) <- [:IS_IN_CATEGORY] - (ch:Challenge) call {match (c:Category) <- [:IS_IN_CATEGORY] - (ch:Challenge) with sum(ch.points) as sum_pts, c return max(sum_pts) as max_points} with sum(ch.points) as sum_points, c, max_points where sum_points = max_points return c, sum_points
